@@ -1,0 +1,27 @@
+"0","library(ggpubr)"
+"2","Loading required package: ggplot2
+"
+"2","
+Attaching package: ‘ggplot2’
+
+"
+"2","The following objects are masked from ‘package:psych’:
+
+    %+%, alpha
+
+"
+"2","Loading required package: magrittr
+"
+"0","p <- ggstatsplot:: ggscatterstats("
+"0","  data = dat,"
+"0","  x = PSS_Score,"
+"0","  y = CSE_Score,"
+"0","  xlab = ""PSS "","
+"0","  ylab = ""CSE"","
+"0","  title = ""Correlation b/w PSS and CSE"","
+"0","  bf.message = FALSE,"
+"0",")"
+"0",""
+"0","#p <- stat_cor(method = ""pearson"", label.x = 2, label.y = 82, )"
+"0",""
+"0","p"

@@ -1,0 +1,3 @@
+"0","library(psych)"
+"0","data <- Tal.Or # data set for example"
+"0","head(data)"

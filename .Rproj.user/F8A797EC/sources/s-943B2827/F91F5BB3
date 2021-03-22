@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1616322428265.000,
+    "dirty" : true,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "855615682",
+    "id" : "F91F5BB3",
+    "lastKnownWriteTime" : 1616399100,
+    "last_content_update" : 1616399102961,
+    "path" : "~/Desktop/Plots/plots_ch1_corr.Rmd",
+    "project_path" : null,
+    "properties" : {
+        "cursorPosition" : "1175,0",
+        "scrollLine" : "1151"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 5,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

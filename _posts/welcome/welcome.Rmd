@@ -1,0 +1,73 @@
+---
+title: "Correlations Matrix (correlograms) plot for Partial correlations using 'Psych' and 'corrplot  ' package in R"
+description: |
+  The following code will provide a correlation matrix plot of Partial correlation between multiple variables. 
+author:
+  - name: Saravana Priyan
+date: 03-22-2021
+output:
+  distill::distill_article:
+    self_contained: false
+    # code_folding: true
+    toc: TRUE
+---
+
+
+
+Partial correlation is used often to remove the effects of variables like (age, sex, BMI, education) over the correlations of another set of variables.
+
+We will be using the partial.r and corr.p function within Psych package to compute partial correlation matrix.
+The function documention can be accessed [here](http://personality-project.org/r/psych/help/partial.r.html).
+
+To create correlogram plot the partial correlation with color coded p values, we will use the library: corrplot in R
+
+
+### Data Preparation
+
+```{r, include=TRUE, echo = TRUE, size= 'large'}
+library(psych)
+data <- Tal.Or # data set for example
+head(data)
+```
+
+
+### Compute partial correlation 
+
+The partial correlation is computed using the "partial.r" and p values using "corr.p" function in Psych package
+
+```{r, include=TRUE, echo = TRUE, }
+
+#partial gender and age from these relations b/w pmi, import, reaction
+par.r <- partial.r(data,1:4,cs(gender,age))
+#par.r <- partial.r(data,c("cond", "pmi", "import", "reaction"),cs(gender,age)) # other usage
+cp <- corr.p(par.r, n=(nrow(data)-2), adjust="none") #n = nrows - number of covariates
+print(cp,short=TRUE)
+```
+
+### Plotting using "corrplot" package
+
+Plot the obtained correlation coeff and p value using corrplot with the following code.
+
+```{r, fig.height=7, fig.width = 10}
+
+library(corrplot)
+
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+
+
+corrplot(par.r,
+    method = "color", col = col(200), mar = c(0, 0.5, 2.5, 0),
+    addCoef.col = "black", # add correlation coefficient
+    number.font = 1, number.cex = 1.5,
+    type = "upper", order = "original",
+    tl.col = "black", tl.srt = 45, # rotation of text labels
+    cl.cex = 1.5,tl.cex = 1.5,
+    addgrid.col = "black", bg = "white", 
+    title = "correlogram plot the partial correlation",
+    # combine with significance level
+    p.mat = cp$p , sig.level = 0.05, insig = "blank",
+    # hide correlation coefficiens on the diagonal
+    diag = FALSE,cl.align.text = 'l'
+  )
+```
+

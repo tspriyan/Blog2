@@ -1,0 +1,1751 @@
+---
+title: "PLots and Analysis of Chapter 1"
+author: "Sandeep kumar"
+date: "3/12/2021"
+output: html_document
+---
+
+```{r,include=FALSE, warning=FALSE, echo=FALSE}
+rm(list = ls())
+library(ggplot2)
+library(tidyverse)
+library(ggpubr)
+library(car)
+library(psych)
+```
+
+```{r, echo=FALSE}
+setwd("~/Desktop/Plots")
+
+files = list.files(pattern = "plot_ch1.csv")
+
+dat= read.table(files, header = TRUE, sep = ",")
+
+dat[dat$Parameters == 'Hb',]$Value <- dat[dat$Parameters == 'Hb',]$Value / 100
+
+
+dat<-dat%>%
+  group_by(Parameters)%>%
+  mutate(CSE_median = median(CSE.Score, na.rm = T),
+         PSS_median = median(PSS.Score, na.rm = T)) %>%
+  mutate(CSE = dplyr::case_when(CSE.Score <= CSE_median ~ 'Low',
+                       CSE.Score > CSE_median ~ 'High'),
+         PSS = dplyr::case_when(PSS.Score <=13 ~ 'Low',
+                         PSS.Score > 26 ~ 'High',
+                         (PSS.Score >= 14 | PSS.Score <= 26) ~ "Moderate"))
+
+print(table(dat[dat$Parameters == "CAT_P",]$PSS))
+print(table(dat[dat$Parameters == "CAT_P",]$CSE))
+
+```
+
+
+```{r, echo=FALSE}
+
+overall_summary_CSE<- dat %>%
+  group_by(Parameters, CSE) %>%
+  summarise(meanValues = mean(Value, na.rm = T),
+            SDValue = sd(Value, na.rm = T),
+            count= n()) %>%
+  mutate(SEM_Value = SDValue / sqrt(count))
+
+
+overall_summary_CSE <-  overall_summary_CSE[!(is.na(overall_summary_CSE$CSE)),]
+
+#print(overall_summary_CSE)
+
+knitr::kable(overall_summary_CSE, caption = "CSE")
+```
+
+
+
+```{r, echo=FALSE}
+
+dat1 <- dat[dat$Parameters == "MDA_R",]
+
+MDAR_t <- t.test( Value ~ CSE, data = dat1, alternative = 'less')
+
+dat1 <- dat[dat$Parameters == "CAT_P",]
+
+CATP_t <- t.test( Value ~ CSE, data = dat1, alternative = 'less')
+
+dat1 <- dat[dat$Parameters == "CHOL_S",]
+
+CHOLS_t <- t.test( Value ~ CSE, data = dat1, alternative = 'less')
+
+dat1 <- dat[dat$Parameters == "CRP_S",]
+
+CRPS_t<- t.test( Value ~ CSE, data = dat1, alternative = 'less')
+
+dat1 <- dat[dat$Parameters == "Hb",]
+
+HB_t<- t.test( Value ~ CSE, data = dat1, alternative = 'less')
+
+dat1 <- dat[dat$Parameters == "MDA_P",]
+
+MDAP_t<- t.test( Value ~ CSE, data = dat1, alternative = 'less')
+
+dat1 <- dat[dat$Parameters == "PCO_S",]
+
+PCOS_t<-t.test( Value ~ CSE, data = dat1, alternative = 'less')
+
+dat1 <- dat[dat$Parameters == "SOD_R",]
+
+SODR_t<- t.test( Value ~ CSE, data = dat1, alternative = 'less')
+
+```
+
+```{r, echo=FALSE, fig.width = 12, fig.height = 7}
+
+levels(overall_summary_CSE$Parameters) <- c("Plasma CAT \n (unit/mg Protein)", "Serum CHOL \n (mg/dL)", "Serum CRP \n (mg/dL)",  "Hemoglobin \n (gm/dL)", "Plasma MDA \n (nmol/mg protein)",  "Erythrocytic MDA \n (nmol/mg protein)" ,
+"Erythrocytic PCO \n (nmol/mg)", "Erythrocytic SOD \n (unit/mg Hb)")
+
+overall_summary_CSE$Parameters <- factor(overall_summary_CSE$Parameters, levels = c("Hemoglobin \n (gm/dL)", "Plasma MDA \n (nmol/mg protein)", "Erythrocytic MDA \n (nmol/mg protein)", "Erythrocytic PCO \n (nmol/mg)", "Erythrocytic SOD \n (unit/mg Hb)" , "Plasma CAT \n (unit/mg Protein)", "Serum CHOL \n (mg/dL)", "Serum CRP \n (mg/dL)" ))
+
+p <- ggplot(overall_summary_CSE, aes(x=CSE, y=meanValues, fill=CSE)) + 
+   geom_bar(stat="identity", position=position_dodge()) +
+  geom_errorbar(aes(ymin=meanValues-SEM_Value, ymax=meanValues+SEM_Value), width=.2,
+                 position=position_dodge(.9))+
+  ylab(" ")
+  
+p <- p + scale_fill_brewer(palette="Paired") + theme_bw()+
+  facet_wrap(.~ Parameters, scales = "free_y" , ncol = 4, labeller = labeller(groupwrap = label_wrap_gen(5)))
+
+p<- p + theme(strip.text = element_text())
+
+p<- p + theme_bw()+
+    theme(legend.position="top") +
+    theme(strip.text.x = element_text(
+      size = 11, color = "black", face = "bold"),
+      axis.title.x = element_text(color="black", size=14, face="bold"))
+
+wrapper <- function(x, ...) paste(strwrap(x, ...), collapse = "\n")
+text = paste(paste0("Hemoglobin t.test: P =", format(round(HB_t$p.value, 2), nsmall = 2)), "\n",
+                             paste0("Plasma MDA t.test: P =", format(round(MDAP_t$p.value, 2), nsmall = 2)), "\n",
+                             paste0("Erythrocytic MDA t.test: P =", format(round(MDAR_t$p.value, 2), nsmall = 2), "**"), "\n",
+                             paste0("Erythrocytic PCO t.test: P =", format(round(PCOS_t$p.value, 4), nsmall = 2), "***"), "\n",
+                             paste0("Erythrocytic SOD t.test: P =", format(round(SODR_t$p.value, 3), nsmall = 2), "*"), "\n",
+                             paste0("Plasma CAT t.test: P =", format(round(CATP_t$p.value, 2), nsmall = 2)), "\n",
+                             paste0("Serum CHOL t.test: P =", format(round(CHOLS_t$p.value, 2), nsmall = 2)), "\n",
+                             paste0("Serum CRP t.test: P =", format(round(CRPS_t$p.value, 2), nsmall = 2)))
+p2<- ggplot() + 
+  annotate("text", x = 4, y = 25, size=8, label = text) + 
+  theme_void()
+
+text.p <- ggparagraph(text = text, face = "italic", size = 12, color = "black")
+
+
+p2 <- ggarrange(p, labels = c("A" ),
+          ncol = 1, nrow = 1)
+
+p2
+
+ggsave("p5.pdf", plot = p2, width = 12, height = 7, units = "in",dpi = 750)
+ggsave("p5.svg", plot = p2, width = 12, height = 7, units = "in",dpi = 750)
+#ggsave("p5.bmp", plot = p2, width = 12, height = 7, units = "in",dpi = 750)
+#ggsave("p5.png", plot = p2, width = 12, height = 7, units = "in",dpi = 750)
+
+
+
+
+```
+
+
+
+
+```{r, echo=FALSE}
+
+overall_summary_PSS<- dat %>%
+  group_by(Parameters, PSS) %>%
+  summarise(meanValues = mean(Value, na.rm = T),
+            SDValue = sd(Value, na.rm = T),
+            count= n()) %>%
+  mutate(SEM_Value = SDValue / sqrt(count))
+
+
+overall_summary_PSS <-  overall_summary_PSS[!(is.na(overall_summary_PSS$PSS)),]
+
+#print(overall_summary_PSS)
+
+
+knitr::kable(overall_summary_PSS, caption = "PSS")
+
+```
+
+
+
+
+```{r, echo=FALSE, fig.width = 12, fig.height = 7}
+
+levels(overall_summary_PSS$Parameters) <- c("Plasma CAT \n (unit/mg Protein)", "Serum CHOL \n (mg/dL)", "Serum CRP \n (mg/dL)",  "Hemoglobin \n (gm/dL)", "Plasma MDA \n (nmol/mg protein)",  "Erythrocytic MDA \n (nmol/mg protein)" ,
+"Erythrocytic PCO \n (nmol/mg)", "Erythrocytic SOD \n (unit/mg Hb)")
+
+overall_summary_PSS$Parameters <- factor(overall_summary_PSS$Parameters, levels = c("Hemoglobin \n (gm/dL)", "Plasma MDA \n (nmol/mg protein)", "Erythrocytic MDA \n (nmol/mg protein)", "Erythrocytic PCO \n (nmol/mg)", "Erythrocytic SOD \n (unit/mg Hb)" , "Plasma CAT \n (unit/mg Protein)", "Serum CHOL \n (mg/dL)", "Serum CRP \n (mg/dL)" ))
+
+
+p1 <- overall_summary_PSS %>%
+  mutate(PSS = fct_relevel(PSS, 
+            "Low", "Moderate", "High")) %>%
+           ggplot(aes(x=PSS, y=meanValues, fill=PSS)) + 
+           geom_bar(stat="identity", position=position_dodge()) +
+           geom_errorbar(aes(ymin=meanValues-SEM_Value, ymax=meanValues+SEM_Value), width=.2,position=position_dodge(.9))+
+           ylab(" ")
+  
+p1 <- p1 + scale_fill_brewer(palette="Paired") + theme_bw()+
+  facet_wrap(.~ Parameters, scales = "free_y" , ncol = 4, labeller = labeller(groupwrap = label_wrap_gen(5)))
+
+p1<- p1 + theme(strip.text = element_text())
+
+p1<- p1 + theme_bw()+
+    theme(legend.position="top") +
+    theme(strip.text.x = element_text(
+      size = 11, color = "black", face = "bold"),
+      axis.title.x = element_text(color="black", size=14, face="bold"))
+
+wrapper <- function(x, ...) paste(strwrap(x, ...), collapse = "\n")
+text = paste(paste0("Hemoglobin t.test: P =", format(round(HB_t$p.value, 2), nsmall = 2)), "\n",
+                             paste0("Plasma MDA t.test: P =", format(round(MDAP_t$p.value, 2), nsmall = 2)), "\n",
+                             paste0("Erythrocytic MDA t.test: P =", format(round(MDAR_t$p.value, 2), nsmall = 2), "**"), "\n",
+                             paste0("Erythrocytic PCO t.test: P =", format(round(PCOS_t$p.value, 4), nsmall = 2), "***"), "\n",
+                             paste0("Erythrocytic SOD t.test: P =", format(round(SODR_t$p.value, 3), nsmall = 2), "*"), "\n",
+                             paste0("Plasma CAT t.test: P =", format(round(CATP_t$p.value, 2), nsmall = 2)), "\n",
+                             paste0("Serum CHOL t.test: P =", format(round(CHOLS_t$p.value, 2), nsmall = 2)), "\n",
+                             paste0("Serum CRP t.test: P =", format(round(CRPS_t$p.value, 2), nsmall = 2)))
+p2<- ggplot() + 
+  annotate("text", x = 4, y = 25, size=8, label = text) + 
+  theme_void()
+
+text.p <- ggparagraph(text = text, face = "italic", size = 12, color = "black")
+
+
+p3 <- ggarrange(p1,  labels = c("A"),
+          ncol = 1, nrow = 1)
+
+p3
+
+ggsave("p51.pdf", plot = p2, width = 12, height = 7, units = "in",dpi = 750)
+ggsave("p51.svg", plot = p2, width = 12, height = 7, units = "in",dpi = 750)
+#ggsave("p51.bmp", plot = p2, width = 12, height = 7, units = "in",dpi = 750)
+ggsave("p51.png", plot = p2, width = 12, height = 7, units = "in",dpi = 750)
+
+
+
+
+```
+
+```{r, echo=FALSE, fig.height=15, fig.width = 12}
+p2 <- ggarrange(p, p1, labels = c("A" , "B"),
+          ncol = 1, nrow = 2)
+
+p2
+
+ggsave("plot_CH1.pdf", plot = p2, width = 12, height = 15, units = "in",dpi = 750)
+ggsave("plot_CH1.svg", plot = p2, width = 12, height = 15, units = "in",dpi = 750)
+#ggsave("plot_CH1.bmp", plot = p2, width = 12, height = 7, units = "in",dpi = 750)
+ggsave("plot_CH1.png", plot = p2, width = 12, height = 15, units = "in",dpi = 750)
+
+
+
+
+```
+
+
+```{r, echo=FALSE}
+
+# Compute the analysis of variance
+res.aov <- oneway.test(Value ~ PSS, data = dat[dat["Parameters"] == "CAT_P", ],
+            var.equal=FALSE)
+# Summary of the analysis
+print("CAT_P")
+print(res.aov)
+
+res.aov <- oneway.test(Value ~ PSS, data = dat[dat["Parameters"] == "CHOL_S", ],
+            var.equal=FALSE)
+# Summary of the analysis
+print("CHOL_S")
+print(res.aov)
+
+res.aov <- oneway.test(Value ~ PSS, data = dat[dat["Parameters"] == "CRP_S", ],
+            var.equal=FALSE)
+# Summary of the analysis
+print("CRP_S")
+print(res.aov)
+
+res.aov <- oneway.test(Value ~ PSS, data = dat[dat["Parameters"] == "Hb", ],
+            var.equal=FALSE)
+# Summary of the analysis
+print("Hb")
+print(res.aov)
+
+res.aov <- oneway.test(Value ~ PSS, data = dat[dat["Parameters"] == "MDA_P", ],
+            var.equal=FALSE)
+# Summary of the analysis
+print("MDA_P")
+print(res.aov)
+
+res.aov <- oneway.test(Value ~ PSS, data = dat[dat["Parameters"] == "MDA_R", ],
+            var.equal=FALSE)
+# Summary of the analysis
+print("MDA_R")
+print(res.aov)
+
+res.aov <- oneway.test(Value ~ PSS, data = dat[dat["Parameters"] == "PCO_S", ],
+            var.equal=FALSE)
+# Summary of the analysis
+print("PCO_S")
+print(res.aov)
+
+res.aov <- oneway.test(Value ~ PSS, data = dat[dat["Parameters"] == "SOD_R",],
+            var.equal=FALSE)
+# Summary of the analysis
+print("SOD_R")
+print(res.aov)
+```
+
+
+```{r, echo=FALSE}
+library(tidyr)
+
+
+dat_wide<-tbl_df(dat) %>%
+  select(Parameters, Value, CSE, PSS, CSE.Score, PSS.Score) %>%       # select columns of interest
+  group_by(Parameters) %>%                   # for each value
+  mutate(id = row_number()) %>%         # create a row identifier
+   mutate(PSS = fct_relevel(PSS, 
+            "Low", "Moderate", "High")) %>%
+  spread(Parameters, Value)
+
+```
+
+
+
+
+```{r, echo=FALSE, fig.height=7, fig.width = 12}
+# as a default this function outputs a correlation matrix plot
+ggstatsplot:: ggcorrmat(
+  data = dat_wide,
+  cor.vars = c( "Hb", "MDA_P","MDA_R", "SOD_R", "CAT_P", "PCO_S", "CHOL_S", "CRP_S", "PSS.Score", "CSE.Score"),
+  cor.vars.names =c( "Hb", "P_MDA","MDA_E", "SOD_E", "CAT_P", "PCO_E", "CHOL_S", "CRP_S", "PSS", "CSE"),
+  colors = c("#B2182B", "white", "#4D4D4D"),
+  title = "Correlation Matrix for Biochemical Paramters",
+  p.adjust.method = "none",
+  type = "robust", # correlation method
+  #colors = c("#cbac43", "white", "#550000"),
+  sig.level = 0.1,
+  pch = "cross",
+  ggcorrplot.args = list(
+    lab_col = "black",
+    lab_size = 5,
+    tl.srt = 90,
+    pch.col = "black",
+    pch.cex = 18
+  )
+)
+
+```
+
+
+
+
+```{r, echo=FALSE, fig.height=7, fig.width = 15}
+# as a default this function outputs a correlation matrix plot
+ggstatsplot:: grouped_ggcorrmat(
+  data = dat_wide,
+  cor.vars = c( "Hb", "MDA_P","MDA_R", "SOD_R", "CAT_P", "PCO_S", "CHOL_S", "CRP_S"),
+  cor.vars.names =c( "Hb", "P_MDA","MDA_E", "SOD_E", "CAT_P", "PCO_E", "CHOL_S", "CRP_S"),
+  grouping.var = CSE,
+  colors = c("#B2182B", "white", "#4D4D4D"),
+  title = "Correlalogram for Biochemical Paramters at CSE",
+  p.adjust.method = "none",
+  type = "robust",
+  pch = "cross",
+  ggcorrplot.args = list(
+    lab_col = "black",
+    lab_size = 5,
+    tl.srt = 90,
+    pch.col = "black",
+    pch.cex = 18
+  ),
+  sig.level = 0.05,
+)
+
+```
+
+
+
+```{r, echo=FALSE, fig.height=7, fig.width = 18}
+# as a default this function outputs a correlation matrix plot
+ggstatsplot:: grouped_ggcorrmat(
+  data = dat_wide,
+  cor.vars = c( "Hb", "MDA_P","MDA_R", "SOD_R", "CAT_P", "PCO_S", "CHOL_S", "CRP_S"),
+  cor.vars.names =c( "Hb", "P_MDA","MDA_E", "SOD_E", "CAT_P", "PCO_E", "CHOL_S", "CRP_S"),
+  grouping.var = PSS,
+  colors = c("#B2182B", "white", "#4D4D4D"),
+  title = "Correlalogram for Biochemical Paramters at PSS",
+  p.adjust.method = "none",
+  type = "robust",
+  pch = "cross",
+  ggcorrplot.args = list(
+    lab_col = "black",
+    lab_size = 4,
+    tl.srt = 90,
+    pch.col = "black",
+    pch.cex = 13
+  ),
+  sig.level = 0.05,
+)
+
+```
+
+
+```{r, echo=FALSE, fig.height=07, fig.width = 10}
+library(ggpubr)
+p <- ggstatsplot:: ggscatterstats(
+  data = dat_wide,
+  x = PSS.Score,
+  y = CSE.Score,
+  xlab = "PSS.Score ",
+  ylab = "CSE.Score",
+  title = "Correlation b/w PSS and CSE",
+  bf.message = FALSE,
+  type = "robust",
+
+)
+
+#p <- stat_cor(method = "pearson", label.x = 2, label.y = 82, )
+
+p
+```
+
+
+
+
+
+
+
+```{r, echo=FALSE, fig.height=07, fig.width = 10}
+ggstatsplot:: ggscatterstats(
+  data = dat_wide,
+  x = PCO_S,
+  y = SOD_R,
+  xlab = "CSE",
+  ylab = "CA",
+  title = "Correlation b/w CSE and MDA_E",
+  bf.message = FALSE,
+  type = 'robust',
+)
+```
+
+
+
+```{r, echo=FALSE, fig.height=07, fig.width = 10}
+ggstatsplot:: ggscatterstats(
+  data = dat_wide,
+  x = CSE.Score,
+  y = PCO_S,
+  xlab = "CSE",
+  ylab = "PCO_E",
+  title = "Correlation b/w CSE and PCO_E",
+  bf.message = FALSE,
+  type = "robust",
+)
+```
+
+
+
+
+
+```{r, echo=FALSE, fig.height=07, fig.width = 10}
+ggstatsplot:: ggscatterstats(
+  data = dat_wide,
+  x = Hb,
+  y = PCO_S,
+  xlab = "PSS",
+  ylab = "PCO_E",
+  title = "Correlation b/w PSS and PCO_E",
+  bf.message = FALSE,
+  type = "robust",
+  
+)
+```
+
+
+
+```{r, echo=FALSE, fig.height=07, fig.width = 10}
+ggstatsplot:: ggscatterstats(
+  data = dat_wide,
+  x = PSS.Score,
+  y = MDA_R,
+  xlab = "PSS",
+  ylab = "MDA_E",
+  title = "Correlation b/w PSS and MDA_E",
+  bf.message = FALSE,
+  type = "robust",)
+```
+
+
+
+
+```{r}
+library(psych)
+dat_wide2<- dat_wide[, c(3, 4, 6,7,8,9,10,11,12,13)]
+
+corPlot(dat_wide2, cex = 1)
+```
+
+
+
+```{r, echo=FALSE, fig.height=10, fig.width = 18}
+dat <- mtcars[, c(1, 3:7)]
+
+corrplot2 <- function(data,
+                      method = "pearson",
+                      sig.level = 0.05,
+                      order = "original",
+                      diag = FALSE,
+                      type = "upper",
+                      tl.srt = 90,
+                      number.font = 1,
+                      number.cex = 1,
+                      mar = c(0, 0, 0, 0)) {
+  library(corrplot)
+  data_incomplete <- data
+  data <- data[complete.cases(data), ]
+  mat <- cor(data, method = method)
+  print(mat)
+  cor.mtest <- function(mat, method) {
+    mat <- as.matrix(mat)
+    n <- ncol(mat)
+    p.mat <- matrix(NA, n, n)
+    diag(p.mat) <- 0
+    for (i in 1:(n - 1)) {
+      for (j in (i + 1):n) {
+        tmp <- cor.test(mat[, i], mat[, j], method = method)
+        p.mat[i, j] <- p.mat[j, i] <- tmp$p.value
+      }
+    }
+    colnames(p.mat) <- rownames(p.mat) <- colnames(mat)
+    p.mat
+  }
+  p.mat <- cor.mtest(data, method = method)
+  col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+    corrplot(mat,
+    method = "color", col = col(200), number.font = number.font,
+    mar = mar, number.cex = number.cex,
+    type = type, order = order,
+    addCoef.col = "black", # add correlation coefficient
+    tl.col = "black", tl.srt = tl.srt, # rotation of text labels
+    # combine with significance level
+      p.mat = p.mat, sig.level = sig.level, insig = "blank",
+    # hide correlation coefficiens on the diagonal
+    diag = diag
+  )
+}
+
+corrplot2(
+  data = dat_wide2,
+  method = "pearson",
+  sig.level = 0.05,
+  order = "original",
+  diag = FALSE,
+  type = "upper",
+  tl.srt = 45
+)
+
+```
+
+
+
+
+```{r}
+dat_wide2 <- dat_wide2[complete.cases(dat_wide2), ]
+mat <- cor(dat_wide2, method = "pearson")
+mat
+```
+
+
+```{r}
+library(psych)
+#Consider the Tal.Or data set.
+lowerCor(Tal.Or)
+lowerCor(dat_wide2)
+#partial gender and age from these relations (they hardly change)
+partial.r(Tal.Or,1:4,cs(gender,age))
+
+#partial.r(dat_wide2,1:10,cs(gender,age))
+```
+
+
+
+
+```{r}
+# for reproducibility
+# for reproducibility
+  set.seed(123)
+  
+  # as a default this function outputs a correlation matrix plot
+    ggstatsplot:: ggcorrmat(
+    data = ggplot2::msleep,
+    type = 'robust',
+    colors = c("#B2182B", "white", "#4D4D4D"),
+    title = "Correlalogram for mammals sleep dataset",
+    subtitle = "sleep units: hours; weight units: kilograms",
+    p.adjust.method = "none",
+  )
+```
+
+```{r}
+# for reproducibility
+# for reproducibility
+set.seed(123)
+
+  ggstatsplot:: ggscatterstats(
+    data = ggplot2::msleep,
+    x = awake,
+    y = sleep_rem,
+    xlab = "awake",
+    ylab = "sleep_rem",
+    title = "Correlation b/w awake and sleep_cycle",
+    bf.message = FALSE,
+    type = "robust",
+    
+  )
+```
+
+```{r}
+set.seed(123)
+
+  ggstatsplot:: ggscatterstats(
+    data = ggplot2::msleep,
+    x = bodywt,
+    y = sleep_rem,
+    xlab = "Brain Weight",
+    ylab = "Sleep REM",
+    title = "Correlation b/w brain weight and sleep REM",
+    bf.message = FALSE,
+    type = "robust"
+  )
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r, echo=FALSE}
+setwd("~/Desktop/Plots")
+
+files = list.files(pattern = "plot_ch1_2.csv")
+
+dat= read.table(files, header = TRUE, sep = ",")
+
+dat[dat$Parameters == 'Hb',]$Value <- dat[dat$Parameters == 'Hb',]$Value / 100
+
+
+dat<-dat%>%
+  group_by(Parameters)%>%
+  mutate(CSE_median = median(CSE.Score, na.rm = T),
+         PSS_median = median(PSS.Score, na.rm = T)) %>%
+  mutate(CSE = dplyr::case_when(CSE.Score <= CSE_median ~ 'Low',
+                       CSE.Score > CSE_median ~ 'High'),
+         PSS = dplyr::case_when(PSS.Score <=13 ~ 'Low',
+                         PSS.Score > 26 ~ 'High',
+                         (PSS.Score >= 14 | PSS.Score <= 26) ~ "Moderate"))
+
+print(table(dat[dat$Parameters == "CAT_P",]$PSS))
+print(table(dat[dat$Parameters == "CAT_P",]$CSE))
+
+
+dat_wide<-tbl_df(dat) %>%
+  select(Parameters, Value, CSE, PSS, CSE.Score, PSS.Score) %>%       # select columns of interest
+  group_by(Parameters) %>%                   # for each value
+  mutate(id = row_number()) %>%         # create a row identifier
+   mutate(PSS = fct_relevel(PSS, 
+            "Low", "Moderate", "High")) %>%
+  spread(Parameters, Value)
+
+dat_wide <- subset(dat_wide, select = -c(id, CSE, PSS))
+
+
+```
+
+
+
+
+
+
+```{r}
+
+dat_wide2 <- dat_wide[complete.cases(dat_wide), ]
+#Consider the Tal.Or data set.
+#lowerCor(Tal.Or)
+lowerCor(dat_wide)
+#partial gender and age from these relations (they hardly change)
+p<-partial.r(dat_wide2,c(1,2,5,6,7,8,9,10,11,12), cs(Age,BMI))
+p
+
+#partial.r(dat_wide2,1:10,cs(gender,age))
+```
+
+
+
+
+```{r, echo=FALSE, fig.height=10, fig.width = 18}
+
+dat_wide3<-dat_wide2[, c("CSE.Score", "PSS.Score","CAT_P","CHOL_S","CRP_S","Hb", "MDA_P","MDA_R","PCO_S","SOD_R","Age","BMI")]
+
+corrplot2 <- function(data,
+                      method = "pearson",
+                      sig.level = 0.05,
+                      order = "original",
+                      diag = FALSE,
+                      type = "upper",
+                      tl.srt = 45,
+                      number.font = 1,
+                      number.cex = 2,
+                      mar = c(0, 0.5, 2.5, 0)) {
+  library(corrplot)
+  data_incomplete <- data
+  data <- data[complete.cases(data), ]
+  
+  
+
+  print(mat)
+  cor.mtest <- function(mat, method) {
+    #mat <- as.matrix(mat)
+    n <- 10
+    p.mat <- matrix(NA, n, n)
+    print(p.mat)
+    diag(p.mat) <- 0
+    
+    for (i in 1:(12 - 3)) {
+      for (j in (i + 1):10) {
+        print(i)
+        print(j)
+        print(names(mat[i]))
+        print(names(mat)[j])
+        #tmp <- cor.test(mat[, i], mat[, j], method = method)
+        pc <- pcor(c(names(mat)[i], names(mat)[j], "Age", "BMI"), var(mat))
+        print(pc)
+        pv <- pcor.test(pc, 2, nrow(mat))
+        print(pv)
+        #p.mat[i, j] <- p.mat[j, i] <- tmp$p.value
+        print(pv$pvalue)
+        
+        p.mat[i, j] <- p.mat[j, i] <- pv$pvalue
+        print(p.mat)
+      }
+    }
+    print(colnames(mat))
+    
+    colnames(p.mat) <- rownames(p.mat) <- colnames(mat[, c(1,2,3,4,5,6,7,8,9,10)])
+    p.mat
+  }
+  p.mat <- cor.mtest(data, method = method)
+  col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+    corrplot(mat,
+    method = "color", col = col(200), number.font = number.font,
+    mar = mar, number.cex = number.cex,
+    type = type, order = order,  tl.cex = 2, cl.cex = 2,  addgrid.col = "black",
+    bg = "white", title = "correlation b/w Psychological and BioChemical parameters",
+    addCoef.col = "black", # add correlation coefficient
+    tl.col = "black", tl.srt = tl.srt, # rotation of text labels
+    # combine with significance level
+      p.mat = p.mat, sig.level = sig.level, insig = "blank",
+    # hide correlation coefficiens on the diagonal
+    diag = diag
+  )
+}
+
+corrplot2(
+  data = dat_wide3,
+  method = "pearson",
+  sig.level = 0.05,
+  order = "original",
+  diag = FALSE,
+  type = "upper",
+  tl.srt = 45,
+
+)
+
+
+```
+
+
+
+
+```{r, echo=FALSE}
+library(psych)
+setwd("~/Desktop/Plots")
+files = list.files(pattern = "PARTIAL CORR.csv")
+
+dat= read.table(files, header = TRUE, sep = ",")
+
+#dat[dat$Parameters == 'Hb',]$Value <- dat[dat$Parameters == 'Hb',]$Value / 100
+
+mat <- partial.r(dat,c(1,2,3,4,5,6,7,8,9,10), cs(Age,BMI))
+mat
+
+```
+
+
+
+```{r, echo=FALSE}
+options(scipen = 999)
+library(ggm)
+
+
+dat2 <- dat[complete.cases(dat),]
+p.mat <- matrix(NA, 10, 10)
+diag(p.mat) <- 0
+
+pc.mat <- matrix(NA, 10, 10)
+diag(pc.mat) <- 0
+
+for (i in 1:9) {
+  for (j in (i + 1):10) {
+    #tmp <- cor.test(mat[, i], mat[, j], method = method)
+    pc <- pcor(c(names(dat2)[i], names(dat2)[j], "Age", "BMI"), var(dat2))
+    pv <- pcor.test(pc, 2, nrow(dat2[i]))
+    #p.mat[i, j] <- p.mat[j, i] <- tmp$p.value
+    
+    p.mat[i, j] <- p.mat[j, i] <- pv$pvalue
+    pc.mat[i, j] <- pc.mat[j, i] <- pc
+  }
+}
+
+print(mat)
+print(pc.mat)
+print(p.mat)
+
+```
+
+
+
+
+```{r, echo=FALSE, fig.height=10, fig.width = 18}
+
+library(corrplot)
+#method = "pearson"
+sig.level = 0.1
+order = "original"
+diag = FALSE
+type = "upper"
+tl.srt = 45
+
+order = "original"
+diag = FALSE
+type = "upper"
+tl.srt = 45
+number.font = 1
+number.cex = 2
+mar = c(0, 0.5, 2.5, 0)
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+
+colnames(p.mat) <- rownames(p.mat) <- colnames(dat[, c(1,2,3,4,5,6,7,8,9,10)])
+colnames(pc.mat) <- rownames(pc.mat) <- colnames(dat[, c(1,2,3,4,5,6,7,8,9,10)])
+
+
+corrplot(pc.mat,
+method = "color", col = col(200), number.font = number.font,
+mar = mar, number.cex = number.cex,
+type = type, order = order,  tl.cex = 2, cl.cex = 2,  addgrid.col = "black",
+bg = "white", title = "correlation b/w Psychological and BioChemical parameters",
+addCoef.col = "black", # add correlation coefficient
+tl.col = "black", tl.srt = tl.srt, # rotation of text labels
+# combine with significance level
+  p.mat = p.mat, sig.level = sig.level, insig = "blank",
+# hide correlation coefficiens on the diagonal
+diag = diag
+)
+```
+
+
+
+
+
+
+
+```{r}
+
+
+library(psych)
+
+p.mat <- matrix(NA, 10, 10)
+diag(p.mat) <- 0
+
+pc.mat <- matrix(NA, 10, 10)
+diag(pc.mat) <- 0
+
+dat<-dat[, c("PSS_Score","CSE_Score","Hb", "MDA_R", "MDA_P", "PCO_S" ,"SOD_E","CAT_P","CHOL_S","CRP_S", "Age","BMI")]
+
+
+for (i in 1:9) {
+  for (j in (i + 1):10) {
+    
+    dt<-as.data.frame(c(dat[i], dat[j], dat[11], dat[12]))
+
+    dt <- dt[complete.cases(dt),]
+
+    #tmp <- cor.test(mat[, i], mat[, j], method = method)
+    pc <- partial.r(dt,c(1,2), cs(Age,BMI))
+    #print(pc)
+    pv <- corr.p(pc, (nrow(dt)-2))
+    #print(pv)
+    
+    p.mat[i, j] <- p.mat[j, i] <- pv$p[2]
+    pc.mat[i, j] <- pc.mat[j, i] <- pv$r[2]
+  }
+}
+
+print(pc.mat)
+print(p.mat)
+
+```
+
+
+```{r}
+Y_resid<-dat$PSS_Score
+X_resid<-dat$CSE_Score
+
+library(ggplot2)
+m<-ggplot(dat, aes(x=X_resid, y=Y_resid)) +
+geom_point() +
+labs(x="X | Z", y = "Y | Z")+
+scale_size_manual(values=c(15))+
+theme_classic()
+m +  geom_smooth(method=lm) + stat_quantile(quantiles =0.5)
+```
+
+
+
+
+
+```{r, echo=FALSE, fig.height=07, fig.width = 10}
+library(ggpubr)
+p <- ggstatsplot:: ggscatterstats(
+  data = dat,
+  x = PSS_Score,
+  y = CSE_Score,
+  xlab = "PSS ",
+  ylab = "CSE",
+  title = "Correlation b/w PSS and CSE",
+  bf.message = FALSE,
+)
+
+#p <- stat_cor(method = "pearson", label.x = 2, label.y = 82, )
+
+p
+```
+
+
+
+
+
+
+
+```{r, echo=FALSE, fig.height=07, fig.width = 10}
+p1<- ggstatsplot:: ggscatterstats(
+  data = dat,
+  x = CSE_Score,
+  y = MDA_R,
+  xlab = "CSE",
+  ylab = "MDA_E",
+  title = "Correlation b/w CSE and MDA_E",
+  bf.message = FALSE,
+  results.subtitle = FALSE,marginal.type = "densigram",
+  
+) 
+
+# p1 <- p1 + annotate(geom="text", x=175, y=4 , label= "r(245)= -0.09, p= 0.07")
+# p1
+```
+
+
+
+```{r, echo=FALSE, fig.height=07, fig.width = 10}
+p2<- ggstatsplot:: ggscatterstats(
+  data = dat,
+  x = CSE_Score,
+  y = PCO_S,
+  xlab = "CSE",
+  ylab = "PCO_E",
+  title = "Correlation b/w CSE and PCO_E",
+  bf.message = FALSE,
+  results.subtitle = FALSE,marginal.type = "densigram",
+)
+```
+
+
+
+
+
+```{r, echo=FALSE, fig.height=07, fig.width = 10}
+p3<- ggstatsplot:: ggscatterstats(
+  data = dat,
+  x = PSS_Score,
+  y = PCO_S,
+  xlab = "PSS",
+  ylab = "PCO_E",
+  title = "Correlation b/w PSS and PCO_E",
+  bf.message = FALSE,
+  results.subtitle = FALSE,marginal.type = "densigram",
+)
+```
+
+
+
+```{r, echo=FALSE, fig.height=07, fig.width = 10}
+p4<- ggstatsplot:: ggscatterstats(
+  data = dat,
+  x = PSS_Score,
+  y = MDA_R,
+  xlab = "PSS",
+  ylab = "MDA_E",
+  title = "Correlation b/w PSS and MDA_E",
+  bf.message = FALSE,
+  type = "robust",
+  results.subtitle = FALSE,marginal.type = "densigram",
+  
+)
+```
+
+
+
+```{r, echo=FALSE, fig.height=9, fig.width = 13}
+library(ggpubr)
+par(mar=c(1,1,1,1)) 
+
+PAS_plot <- ggarrange(p3, p4, p1,p2, labels = c("A", "B", "C", "D"),
+           ncol = 2, nrow = 2, hjust = -1, vjust = 5)
+
+PAS_plot
+```
+
+
+
+```{r, echo=FALSE}
+library(psych)
+setwd("~/Desktop/Plots")
+files = list.files(pattern = "PARTIAL CORR.csv")
+
+dat= read.table(files, header = TRUE, sep = ",")
+
+dat<-dat[, c("PSS_Score","CSE_Score","Hb", "MDA_R", "MDA_P", "PCO_S" ,"SOD_E","CAT_P","CHOL_S","CRP_S", "Age","BMI", "PSS", "CSE")]
+
+#dat[dat$Parameters == 'Hb',]$Value <- dat[dat$Parameters == 'Hb',]$Value / 100
+
+mat <- partial.r(dat,c(1,2,3,4,5,6,7,8,9,10), cs(Age,BMI))
+mat
+
+```
+
+
+
+```{r, echo=FALSE, fig.height=7, fig.width = 15}
+# as a default this function outputs a correlation matrix plot
+
+dat2<- dat[complete.cases(dat),]
+ggstatsplot:: grouped_ggcorrmat(
+  data = dat2,
+  cor.vars = c( "PSS_Score", "CSE_Score", "Hb", "MDA_P","MDA_R", "SOD_E", "CAT_P", "PCO_S", "CHOL_S", "CRP_S"),
+  cor.vars.names =c( "PSS", "CSE", "Hb", "P_MDA","MDA_E", "SOD_E", "CAT_P", "PCO_E", "CHOL_S", "CRP_S"),
+  grouping.var = CSE,
+  colors = c("#B2182B", "white", "#4D4D4D"),
+  title = "Correlalogram for Biochemical Paramters at CSE",
+  p.adjust.method = "none",
+  pch = "cross",
+  ggcorrplot.args = list(
+    lab_col = "black",
+    lab_size = 5,
+    tl.srt = 90,
+    pch.col = "black",
+    pch.cex = 18
+  ),
+  sig.level = 0.05,
+)
+
+```
+
+
+
+```{r, echo=FALSE, fig.height=7, fig.width = 18}
+# as a default this function outputs a correlation matrix plot
+ggstatsplot:: grouped_ggcorrmat(
+  data = dat2,
+  cor.vars = c( "PSS_Score", "CSE_Score", "Hb", "MDA_P","MDA_R", "SOD_E", "CAT_P", "PCO_S", "CHOL_S", "CRP_S"),
+  cor.vars.names =c( "PSS", "CSE", "Hb", "P_MDA","MDA_E", "SOD_E", "CAT_P", "PCO_E", "CHOL_S", "CRP_S"),
+  grouping.var = PSS,
+  colors = c("#B2182B", "white", "#4D4D4D"),
+  title = "Correlalogram for Biochemical Paramters at PSS",
+  p.adjust.method = "none",
+  pch = "cross",
+  ggcorrplot.args = list(
+    lab_col = "black",
+    lab_size = 4,
+    tl.srt = 90,
+    pch.col = "black",
+    pch.cex = 13
+  ),
+  sig.level = 0.05,
+)
+
+```
+
+
+
+
+
+
+
+
+```{r, echo=FALSE, fig.height=9, fig.width = 19}
+options(scipen = 999)
+library(ggm)
+
+
+
+dat2<- dat[complete.cases(dat),]
+
+dat3 <- dat2[dat2$CSE == 'LOW',]
+p.mat <- matrix(NA, 10, 10)
+diag(p.mat) <- 0
+
+pc.mat <- matrix(NA, 10, 10)
+diag(pc.mat) <- 0
+
+method = 'pearson'
+
+for (i in 1:9) {
+  for (j in (i + 1):10) {
+    tmp <- cor.test(dat3[, i], dat3[, j], method = method)
+#    pc <- pcor(c(names(dat2)[i], names(dat2)[j], "Age", "BMI"), var(dat2))
+#    pv <- pcor.test(pc, 2, nrow(dat2[i]))
+    #p.mat[i, j] <- p.mat[j, i] <- tmp$p.value
+    
+    p.mat[i, j] <- p.mat[j, i] <- tmp$p.value
+    pc.mat[i, j] <- pc.mat[j, i] <- tmp$estimate
+  }
+}
+
+colnames(p.mat) <- rownames(p.mat) <- colnames(dat3[, c(1,2,3,4,5,6,7,8,9,10)])
+colnames(pc.mat) <- rownames(pc.mat) <- colnames(dat3[, c(1,2,3,4,5,6,7,8,9,10)])
+
+print(pc.mat)
+print(p.mat)
+
+
+library(corrplot)
+#method = "pearson"
+sig.level = 0.05
+order = "original"
+diag = FALSE
+type = "upper"
+tl.srt = 45
+
+order = "original"
+diag = FALSE
+type = "upper"
+tl.srt = 45
+number.font = 1
+number.cex = 1.75
+  mar = c(0, 0.5, 2.5, 0)
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+
+colnames(p.mat) <- rownames(p.mat) <- colnames(dat[, c(1,2,3,4,5,6,7,8,9,10)])
+colnames(pc.mat) <- rownames(pc.mat) <- colnames(dat[, c(1,2,3,4,5,6,7,8,9,10)])
+
+
+corrplot(pc.mat,
+method = "color", col = col(200), number.font = number.font,
+mar = mar, number.cex = number.cex,
+type = type, order = order,  tl.cex = 2, cl.cex = 2,  addgrid.col = "black",
+bg = "white", title = "correlation b/w bioChemical parameters for CSE: LOW",
+addCoef.col = "black", # add correlation coefficient
+tl.col = "black", tl.srt = tl.srt, # rotation of text labels
+# combine with significance level
+  p.mat = p.mat, sig.level = sig.level, insig = "blank",
+# hide correlation coefficiens on the diagonal
+diag = diag
+)
+
+```
+
+
+
+
+
+
+```{r, echo=FALSE, fig.height=9, fig.width = 19}
+options(scipen = 999)
+library(ggm)
+
+dat2<- dat[complete.cases(dat),]
+
+dat3 <- dat2[dat2$CSE == 'HIGH',]
+p.mat <- matrix(NA, 10, 10)
+diag(p.mat) <- 0
+
+pc.mat <- matrix(NA, 10, 10)
+diag(pc.mat) <- 0
+
+method = 'pearson'
+
+for (i in 1:9) {
+  for (j in (i + 1):10) {
+    tmp <- cor.test(dat3[, i], dat3[, j], method = method)
+#    pc <- pcor(c(names(dat2)[i], names(dat2)[j], "Age", "BMI"), var(dat2))
+#    pv <- pcor.test(pc, 2, nrow(dat2[i]))
+    #p.mat[i, j] <- p.mat[j, i] <- tmp$p.value
+    
+    p.mat[i, j] <- p.mat[j, i] <- tmp$p.value
+    pc.mat[i, j] <- pc.mat[j, i] <- tmp$estimate
+  }
+}
+
+colnames(p.mat) <- rownames(p.mat) <- colnames(dat3[, c(1,2,3,4,5,6,7,8,9,10)])
+colnames(pc.mat) <- rownames(pc.mat) <- colnames(dat3[, c(1,2,3,4,5,6,7,8,9,10)])
+
+print(pc.mat)
+print(p.mat)
+
+
+library(corrplot)
+#method = "pearson"
+sig.level = 0.05
+order = "original"
+diag = FALSE
+type = "upper"
+tl.srt = 45
+
+order = "original"
+diag = FALSE
+type = "upper"
+tl.srt = 45
+number.font = 1
+number.cex = 1.75
+mar = c(0, 0.5, 2.5, 0)
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+
+colnames(p.mat) <- rownames(p.mat) <- colnames(dat[, c(1,2,3,4,5,6,7,8,9,10)])
+colnames(pc.mat) <- rownames(pc.mat) <- colnames(dat[, c(1,2,3,4,5,6,7,8,9,10)])
+
+
+corrplot(pc.mat,
+method = "color", col = col(200), number.font = number.font,
+mar = mar, number.cex = number.cex,
+type = type, order = order,  tl.cex = 2, cl.cex = 2,  addgrid.col = "black",
+bg = "white", title = "correlation b/w bioChemical parameters for CSE: HIGH",
+addCoef.col = "black", # add correlation coefficient
+tl.col = "black", tl.srt = tl.srt, # rotation of text labels
+# combine with significance level
+  p.mat = p.mat, sig.level = sig.level, insig = "blank",
+# hide correlation coefficiens on the diagonal
+diag = diag
+)
+
+```
+
+
+
+
+
+
+```{r, echo=FALSE, fig.height=9, fig.width = 19}
+options(scipen = 999)
+library(ggm)
+
+dat2<- dat[complete.cases(dat),]
+
+dat3 <- dat2[dat2$PSS == 'HIGH',]
+p.mat <- matrix(NA, 10, 10)
+diag(p.mat) <- 0
+
+pc.mat <- matrix(NA, 10, 10)
+diag(pc.mat) <- 0
+
+method = 'pearson'
+
+for (i in 1:9) {
+  for (j in (i + 1):10) {
+    tmp <- cor.test(dat3[, i], dat3[, j], method = method)
+#    pc <- pcor(c(names(dat2)[i], names(dat2)[j], "Age", "BMI"), var(dat2))
+#    pv <- pcor.test(pc, 2, nrow(dat2[i]))
+    #p.mat[i, j] <- p.mat[j, i] <- tmp$p.value
+    
+    p.mat[i, j] <- p.mat[j, i] <- tmp$p.value
+    pc.mat[i, j] <- pc.mat[j, i] <- tmp$estimate
+  }
+}
+
+colnames(p.mat) <- rownames(p.mat) <- colnames(dat3[, c(1,2,3,4,5,6,7,8,9,10)])
+colnames(pc.mat) <- rownames(pc.mat) <- colnames(dat3[, c(1,2,3,4,5,6,7,8,9,10)])
+
+print(pc.mat)
+print(p.mat)
+
+
+library(corrplot)
+#method = "pearson"
+sig.level = 0.05
+order = "original"
+diag = FALSE
+type = "upper"
+tl.srt = 45
+
+order = "original"
+diag = FALSE
+type = "upper"
+tl.srt = 45
+number.font = 1
+number.cex = 1.75
+mar = c(0, 0.5, 2.5, 0)
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+
+colnames(p.mat) <- rownames(p.mat) <- colnames(dat[, c(1,2,3,4,5,6,7,8,9,10)])
+colnames(pc.mat) <- rownames(pc.mat) <- colnames(dat[, c(1,2,3,4,5,6,7,8,9,10)])
+
+
+corrplot(pc.mat,
+method = "color", col = col(200), number.font = number.font,
+mar = mar, number.cex = number.cex,
+type = type, order = order,  tl.cex = 2, cl.cex = 2,  addgrid.col = "black",
+bg = "white", title = "correlation b/w bioChemical parameters for PSS: HIGH",
+addCoef.col = "black", # add correlation coefficient
+tl.col = "black", tl.srt = tl.srt, # rotation of text labels
+# combine with significance level
+  p.mat = p.mat, sig.level = sig.level, insig = "blank",
+# hide correlation coefficiens on the diagonal
+diag = diag
+)
+
+```
+
+
+
+
+
+
+```{r, echo=FALSE, fig.height=9, fig.width = 19}
+options(scipen = 999)
+library(ggm)
+
+dat2<- dat[complete.cases(dat),]
+
+dat3 <- dat2[dat2$PSS == 'LOW',]
+p.mat <- matrix(NA, 10, 10)
+diag(p.mat) <- 0
+
+pc.mat <- matrix(NA, 10, 10)
+diag(pc.mat) <- 0
+
+method = 'pearson'
+
+for (i in 1:9) {
+  for (j in (i + 1):10) {
+    tmp <- cor.test(dat3[, i], dat3[, j], method = method)
+#    pc <- pcor(c(names(dat2)[i], names(dat2)[j], "Age", "BMI"), var(dat2))
+#    pv <- pcor.test(pc, 2, nrow(dat2[i]))
+    #p.mat[i, j] <- p.mat[j, i] <- tmp$p.value
+    
+    p.mat[i, j] <- p.mat[j, i] <- tmp$p.value
+    pc.mat[i, j] <- pc.mat[j, i] <- tmp$estimate
+  }
+}
+
+colnames(p.mat) <- rownames(p.mat) <- colnames(dat3[, c(1,2,3,4,5,6,7,8,9,10)])
+colnames(pc.mat) <- rownames(pc.mat) <- colnames(dat3[, c(1,2,3,4,5,6,7,8,9,10)])
+
+print(pc.mat)
+print(p.mat)
+
+
+library(corrplot)
+#method = "pearson"
+sig.level = 0.05
+order = "original"
+diag = FALSE
+type = "upper"
+tl.srt = 45
+
+order = "original"
+diag = FALSE
+type = "upper"
+tl.srt = 45
+number.font = 1
+number.cex = 1.75
+mar = c(0, 0.5, 2.5, 0)
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+
+colnames(p.mat) <- rownames(p.mat) <- colnames(dat[, c(1,2,3,4,5,6,7,8,9,10)])
+colnames(pc.mat) <- rownames(pc.mat) <- colnames(dat[, c(1,2,3,4,5,6,7,8,9,10)])
+
+
+corrplot(pc.mat,
+method = "color", col = col(200), number.font = number.font,
+mar = mar, number.cex = number.cex,
+type = type, order = order,  tl.cex = 2, cl.cex = 2,  addgrid.col = "black",
+bg = "white", title = "correlation b/w bioChemical parameters for PSS: LOW",
+addCoef.col = "black", # add correlation coefficient
+tl.col = "black", tl.srt = tl.srt, # rotation of text labels
+# combine with significance level
+  p.mat = p.mat, sig.level = sig.level, insig = "blank",
+# hide correlation coefficiens on the diagonal
+diag = diag
+)
+
+```
+
+
+
+```{r, echo=FALSE, fig.height=9, fig.width = 19}
+options(scipen = 999)
+library(ggm)
+
+dat2<- dat[complete.cases(dat),]
+
+dat3 <- dat2[dat2$PSS == 'MODERATE',]
+p.mat <- matrix(NA, 10, 10)
+diag(p.mat) <- 0
+
+pc.mat <- matrix(NA, 10, 10)
+diag(pc.mat) <- 0
+
+method = 'pearson'
+
+for (i in 1:9) {
+  for (j in (i + 1):10) {
+    tmp <- cor.test(dat3[, i], dat3[, j], method = method)
+#    pc <- pcor(c(names(dat2)[i], names(dat2)[j], "Age", "BMI"), var(dat2))
+#    pv <- pcor.test(pc, 2, nrow(dat2[i]))
+    #p.mat[i, j] <- p.mat[j, i] <- tmp$p.value
+    
+    p.mat[i, j] <- p.mat[j, i] <- tmp$p.value
+    pc.mat[i, j] <- pc.mat[j, i] <- tmp$estimate
+  }
+}
+
+colnames(p.mat) <- rownames(p.mat) <- colnames(dat3[, c(1,2,3,4,5,6,7,8,9,10)])
+colnames(pc.mat) <- rownames(pc.mat) <- colnames(dat3[, c(1,2,3,4,5,6,7,8,9,10)])
+
+print(pc.mat)
+print(p.mat)
+
+
+library(corrplot)
+#method = "pearson"
+sig.level = 0.05
+order = "original"
+diag = FALSE
+type = "upper"
+tl.srt = 45
+
+order = "original"
+diag = FALSE
+type = "upper"
+tl.srt = 45
+number.font = 1
+number.cex = 1.75
+mar = c(0, 0.5, 2.5, 0)
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+
+colnames(p.mat) <- rownames(p.mat) <- colnames(dat[, c(1,2,3,4,5,6,7,8,9,10)])
+colnames(pc.mat) <- rownames(pc.mat) <- colnames(dat[, c(1,2,3,4,5,6,7,8,9,10)])
+
+
+corrplot(pc.mat,
+method = "color", col = col(200), number.font = number.font,
+mar = mar, number.cex = number.cex,
+type = type, order = order,  tl.cex = 2, cl.cex = 2,  addgrid.col = "black",
+bg = "white", title = "correlation b/w bioChemical parameters for PSS: MODERATE",
+addCoef.col = "black", # add correlation coefficient
+tl.col = "black", tl.srt = tl.srt, # rotation of text labels
+# combine with significance level
+  p.mat = p.mat, sig.level = sig.level, insig = "blank",
+# hide correlation coefficiens on the diagonal
+diag = diag
+)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
