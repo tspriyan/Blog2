@@ -2,18 +2,26 @@
   "articles": [
     {
       "path": "about.html",
-      "title": "About Saravana Priyan T",
+      "title": "About:",
       "description": "My research work primarily focusses on the interaction betweeen attention and consiousness experience.\nCurrently, I am a D.Phil student at the [Centre of Behavioural and Cognitive Sciences (CBCS), University of Allahabad, India](https://cbcs.ac.in/) and I can be reached at saravana@cbcs.ac.in or priyantsau@gmail.com\n",
       "author": [],
       "contents": "\nVisit my twitter page at: priyan.ts\n\n\n\n",
-      "last_modified": "2021-03-22T13:38:14+05:30"
+      "last_modified": "2021-03-23T14:33:28+05:30"
     },
     {
       "path": "index.html",
-      "title": "Priyan.T. Saravana",
+      "title": "Posts",
       "author": [],
       "contents": "\n\n\n\n",
-      "last_modified": "2021-03-22T13:38:14+05:30"
+      "last_modified": "2021-03-23T14:33:28+05:30"
+    },
+    {
+      "path": "publication.html",
+      "title": "Publication",
+      "description": "My research work primarily focusses on the interaction betweeen attention and consiousness experience.\nCurrently, I am a D.Phil student at the [Centre of Behavioural and Cognitive Sciences (CBCS), University of Allahabad, India](https://cbcs.ac.in/) \n",
+      "author": [],
+      "contents": "\n2021\nTeam, R. C. (2013). R: A language and environment for statistical computing.\n\n\n\n",
+      "last_modified": "2021-03-23T14:33:29+05:30"
     }
   ],
   "collections": ["posts/posts.json"]

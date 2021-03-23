@@ -1,0 +1,16 @@
+---
+title: "Publication"
+description: |
+  My research work primarily focusses on the interaction betweeen attention and consiousness experience.
+  Currently, I am a D.Phil student at the [Centre of Behavioural and Cognitive Sciences (CBCS), University of Allahabad, India](https://cbcs.ac.in/) 
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+### 2021
+
+1. Team, R. C. (2013). R: A language and environment for statistical computing.
+
