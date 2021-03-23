@@ -1,0 +1,16 @@
+---
+title: "El grego fallacy and top down effects in time perception"
+description: |
+  The following post will layout the impotance of state change between experience of the standard duration and the test duration in temporal bisection tasks. Also, we make use of El- Grego fallacy to predict the top down effects on temporal reproduction tasks.
+author:
+  - name: Saravana Priyan
+date: 03-23-2021
+output:
+  distill::distill_article:
+    self_contained: false
+    # code_folding: true
+    toc: TRUE
+---
+
+
+El-Grego fallacy says that " the distortions must cancel out when the means of reproduction would also be distorted in the same way"
